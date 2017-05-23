@@ -1,0 +1,35 @@
+# -*- coding: utf-8 -*-
+# vim: ft=jinja
+
+{## Start with  defaults from defaults.sls ##}
+{% import_yaml 'krb5/defaults.yaml' as default_settings %}
+
+{##
+Setup variable using grains['os_family'] based logic, only add key:values here
+that differ from whats in defaults.yaml
+##}
+{% set flavor_map = salt['grains.filter_by'](
+  {
+    'Debian': {
+      'package_name': 'krb5-user',
+    },
+    'FreeBSD': {
+      'package_name': 'krb5',
+    },
+    'RedHat': {
+      'package_name': 'krb5-workstation',
+    }
+  },
+  grain='os_family',
+  merge=salt['pillar.get']('krb5:lookup')
+) %}
+
+{## Merge the flavor_map over the default settings ##}
+{% do default_settings.krb5.update(flavor_map) %}
+
+{## Merge in changes from the krb5:lookup pillar ##}
+{% set krb5_settings = salt['pillar.get'](
+  'krb5',
+  default=default_settings.krb5,
+  merge=True
+) %}
